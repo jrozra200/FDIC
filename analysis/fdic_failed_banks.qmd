@@ -1,0 +1,70 @@
+---
+title: "FDIC Failed Banks"
+author: "Jake Rozran"
+format: html
+editor: visual
+---
+
+## How Many Banks Have Failed Since 2000?
+
+### In R:
+
+```{r}
+#| message: false
+#| out-width: 100%
+
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+
+dat <- read_csv("../data/banklist.csv")
+dat$`Closing Date` <- as_date(dat$`Closing Date`, format = "%d-%b-%y")
+
+plot_dat <- dat %>% 
+    mutate(`Closing Date` = as_date(`Closing Date`, format = "%d-%b-%y"),
+           month_year = floor_date(`Closing Date`, unit = "year")) %>% 
+    group_by(month_year) %>% 
+    summarise(num_failed = length(`Bank Name`)) %>% 
+    mutate(cum_failed = cumsum(num_failed))
+
+ggplot(plot_dat, aes(x = month_year, y = num_failed, group = 1)) + 
+    geom_bar(stat = "identity")
+
+ggplot(plot_dat, aes(x = month_year, y = cum_failed, group = 1)) +
+    geom_area(stat = "identity")
+```
+
+### In Python:
+
+```{python}
+#| warning: false
+#| message: false
+#| out-width: 100%
+
+import pandas as pd
+import datetime as dt
+from plotnine import *
+
+dat = pd.read_csv("../data/banklist.csv")
+dat['Year'] = (pd.to_datetime(dat['Closing Date'], format = '%d-%b-%y')
+                    .dt.strftime('%Y')
+                    .astype(int))
+
+plot_dat = (dat.groupby('Year', as_index = False)
+                    .count()[['Year', 'Bank Name']])
+plot_dat.rename(columns = {'Bank Name':'num_banks'}, inplace = True)
+plot_dat['cum_banks'] = plot_dat['num_banks'].cumsum()
+
+(
+    ggplot(plot_dat) +
+        aes(x = 'Year', y = 'num_banks') + 
+        geom_bar(stat = 'identity')
+)
+
+(
+    ggplot(plot_dat) +
+        aes(x = 'Year', y = 'cum_banks') + 
+        geom_area()
+)
+```
